@@ -1,0 +1,51 @@
+# Copy into .github/workflows/ to try it, or add the collection steps to an
+# existing conda CI job after checkout and conda setup.
+name: Conda HTTP diagnostics example
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: conda-incubator/setup-miniconda@v4.1.0
+        with:
+          miniforge-version: latest
+          activate-environment: ""
+          auto-activate: true
+          channels: conda-forge
+
+      - name: Install the plugin into conda's own environment
+        id: cdn-plugin
+        run: conda run -n base python -m pip install --no-deps .
+
+      - name: Select the local output directory
+        id: cdn-output
+        run: |
+          mkdir -p "$RUNNER_TEMP/conda-cdn-log"
+          printf 'CONDA_CDN_LOG_DIR=%s/conda-cdn-log\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+
+      - name: Run the conda operation being measured
+        run: conda run -n base python -m conda search --override-channels --channel conda-forge zlib
+
+      - name: Add HTTP diagnostics to the run summary
+        if: ${{ always() && steps.cdn-plugin.outcome == 'success' && steps.cdn-output.outcome == 'success' }}
+        run: conda run -n base python -m conda cdn-log "$CONDA_CDN_LOG_DIR" --github-summary
+
+      - name: Upload HTTP diagnostic records
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: conda-http-${{ github.job }}-${{ runner.os }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/conda-cdn-log/*.jsonl
+          if-no-files-found: ignore
+          retention-days: 14

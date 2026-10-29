@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conda-cdn-log"
+version = "0.1.0"
+description = "Capture conda HTTP diagnostics for CI artifacts and job summaries."
+requires-python = ">=3.11"
+dependencies = ["requests>=2.28,<3", "urllib3>=2,<3"]
+readme = "README.md"
+
+[project.urls]
+repository = "https://github.com/jezdez/conda-cdn-log"
+issues = "https://github.com/jezdez/conda-cdn-log/issues"
+
+[project.entry-points.conda]
+conda-cdn-log = "conda_cdn_log.plugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
